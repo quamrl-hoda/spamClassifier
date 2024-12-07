@@ -1,46 +1,51 @@
-import pickle
 from flask import Flask, render_template, request
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+import pickle
 import string
 
-# Flask app - starting point of our project
 app = Flask(__name__)
 
-# Download required NLTK data
 nltk.download('punkt')
 nltk.download('stopwords')
 
 ps = PorterStemmer()
 
-def transform_text(message):
-    # Lowercase the text
-    text = message.lower()
-    # Tokenize the text
+def transformed_text(text):
+    text = text.lower()
     text = nltk.word_tokenize(text)
-    # Remove non-alphanumeric characters
-    y = [i for i in text if i.isalnum()]
-    # Remove stopwords and punctuation
-    y = [i for i in y if i not in stopwords.words('english') and i not in string.punctuation]
-    # Stemming
-    y = [ps.stem(i) for i in y]
-    return " ".join(y)  # Preprocessed text
+
+    y = []
+    for i in text:
+        if i.isalnum():
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        if i not in stopwords.words('english') and i not in string.punctuation:
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        y.append(ps.stem(i))
+
+    return " ".join(y)
 
 def predict_spam(message):
-    try:
-        # Preprocess the message
-        transformed_sms = transform_text(message)
-        # Vectorize the processed message
-        vector_input = tfidf.transform([transformed_sms])
-        # Predict using the ML model
-        result = model.predict(vector_input)[0]
-        return result
-    except Exception as e:
-        print(f"Error during prediction: {e}")
-        return "Error"
+    # Preprocess
+    transformed_sms = transformed_text(message)
+    # Vectorize
+    vector_input = tfidf.transform([transformed_sms])
+    # Predict
+    result = model.predict(vector_input)[0]
+    return result
 
-@app.route('/')  # Homepage
+@app.route('/')
 def home():
     return render_template('index.html')
 
@@ -49,11 +54,10 @@ def predict():
     if request.method == 'POST':
         input_sms = request.form['message']
         result = predict_spam(input_sms)
-        return render_template('index.html', result=result)
+        return render_template('index.html', result=result)  # Pass 'result' to the template
+
 
 if __name__ == '__main__':
-    # Load the vectorizer and model
     tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
     model = pickle.load(open('model.pkl', 'rb'))
-    # Run the Flask app
     app.run(host='0.0.0.0')
